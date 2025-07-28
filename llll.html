@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paus Laut Realistis</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #0077be, #001f3f);
+    }
+    canvas {
+      display: block;
+    }
+    #sunlight {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.2), transparent 70%);
+      pointer-events: none;
+      animation: sunlightMove 8s ease-in-out infinite alternate;
+    }
+    @keyframes sunlightMove {
+      from { transform: translateY(0); }
+      to { transform: translateY(20px); }
+    }
+    .bubble {
+      position: absolute;
+      bottom: -20px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      animation: rise 6s linear infinite;
+    }
+    @keyframes rise {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-100vh); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sunlight"></div>
+  <canvas id="ocean"></canvas>
+  <audio id="whaleSound" src="https://cdn.pixabay.com/audio/2022/07/25/audio_a665a49c14.mp3"></audio>
+  <audio id="splashSound" src="https://cdn.pixabay.com/audio/2023/03/15/audio_0d23f2e4aa.mp3"></audio>
+
+  <script>
+    const canvas = document.getElementById('ocean');
+    const ctx = canvas.getContext('2d');
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+
+    const whaleImg = new Image();
+    whaleImg.src = 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Humpback_Whale_underwater_shot.jpg';
+
+    const whale = {
+      x: w / 2,
+      y: h / 2,
+      vx: 2 + Math.random(),
+      vy: 1 + Math.random(),
+      size: 250,
+      jumpCooldown: 0
+    };
+
+    let bubbles = [];
+    let splashes = [];
+
+    function drawWhale() {
+      ctx.drawImage(whaleImg, whale.x, whale.y, whale.size, whale.size * 0.5);
+    }
+
+    function createSplash(x, y) {
+      for (let i = 0; i < 15; i++) {
+        splashes.push({
+          x: x,
+          y: y,
+          radius: Math.random() * 4 + 2,
+          vx: (Math.random() - 0.5) * 5,
+          vy: Math.random() * -3,
+          alpha: 1
+        });
+      }
+    }
+
+    function drawSplashes() {
+      for (let i = splashes.length - 1; i >= 0; i--) {
+        const s = splashes[i];
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+        ctx.fill();
+        s.x += s.vx;
+        s.y += s.vy;
+        s.alpha -= 0.02;
+        if (s.alpha <= 0) splashes.splice(i, 1);
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+
+      // laut gelombang halus
+      ctx.fillStyle = 'rgba(0,0,50,0.1)';
+      for (let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        const y = h * 0.7 + Math.sin(Date.now() / 500 + i) * 8;
+        ctx.arc(i * (w / 20), y, 40, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawWhale();
+      drawSplashes();
+
+      whale.x += whale.vx;
+      whale.y += whale.vy;
+
+      // pantulan dinding
+      if (whale.x + whale.size > w || whale.x < 0) whale.vx *= -1;
+      if (whale.y + whale.size * 0.5 > h || whale.y < 0) whale.vy *= -1;
+
+      // lompat paus (random tiap 5-10 detik)
+      if (Math.random() < 0.002 && whale.jumpCooldown <= 0) {
+        whale.vy = -10;
+        whale.vx += (Math.random() - 0.5) * 4;
+        document.getElementById('splashSound').currentTime = 0;
+        document.getElementById('splashSound').play();
+        createSplash(whale.x + whale.size / 2, whale.y + whale.size / 2);
+        whale.jumpCooldown = 300; // tunggu sebelum lompat lagi
+      }
+
+      if (whale.jumpCooldown > 0) whale.jumpCooldown--;
+
+      requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener('click', () => {
+      document.getElementById('whaleSound').play();
+    });
+
+    function makeBubble() {
+      let bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      bubble.style.left = Math.random() * window.innerWidth + 'px';
+      bubble.style.width = bubble.style.height = Math.random()*10 + 5 + 'px';
+      document.body.appendChild(bubble);
+      setTimeout(() => bubble.remove(), 6000);
+    }
+    setInterval(makeBubble, 400);
+
+    window.addEventListener('resize', () => {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    });
+
+    animate();
+  </script>
+</body>
+</html>
